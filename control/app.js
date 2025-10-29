@@ -1,7 +1,11 @@
 // ====== CONFIG ======
-const BACKEND_HTTP = 'http://54.198.237.205:5500';
-const WS_URL_HTTP  = 'ws://54.198.237.205:5500/ws';
-const WS_URL_HTTPS = 'wss://54.198.237.205/ws'; // sólo servirá si luego configuras HTTPS
+//// control/app.js y monitoreo/index.html
+const BACKEND_HTTP = 'http://18.212.218.2:5500';
+const WS_URL_HTTP  = 'ws://18.212.218.2:5500/ws';
+const WS_URL_HTTPS = 'wss://18.212.218.2/ws'; // solo servirá si pones HTTPS en EC2
+//const BACKEND_HTTP = 'http://localhost:5500';
+//const WS_URL_HTTP  = 'ws://localhost:5500/ws';
+//const WS_URL_HTTPS = 'wss://localhost/ws';
 const WS_URL = (location.protocol === 'https:') ? WS_URL_HTTPS : WS_URL_HTTP;
 
 // ====== UTIL ======
