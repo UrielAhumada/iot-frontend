@@ -108,8 +108,9 @@
   <script>
   // ====== CONFIG (ngrok) ======
 const BACKEND_HTTP = 'https://macroclimatic-earline-pseudoarchaically.ngrok-free.dev';
+const WS_URL_HTTP  = 'ws://localhost:5500/ws';
 const WS_URL_HTTPS = 'wss://macroclimatic-earline-pseudoarchaically.ngrok-free.dev/ws';
-const WS_URL = WS_URL_HTTPS;
+const WS_URL = (location.protocol === 'https:') ? WS_URL_HTTPS : WS_URL_HTTP;
 
   // ====== UTIL ======
   document.getElementById('year').textContent = new Date().getFullYear();

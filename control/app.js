@@ -1,7 +1,12 @@
 // ====== CONFIG ======
+// ====== CONFIG ======
 const BACKEND_HTTP = 'https://macroclimatic-earline-pseudoarchaically.ngrok-free.dev';
+
+const WS_URL_HTTP  = 'ws://localhost:5500/ws'; // solo si abres la página por http://
 const WS_URL_HTTPS = 'wss://macroclimatic-earline-pseudoarchaically.ngrok-free.dev/ws';
-const WS_URL = WS_URL_HTTPS;
+
+const WS_URL = (location.protocol === 'https:') ? WS_URL_HTTPS : WS_URL_HTTP;
+
 
 // ====== UTIL ======
 const estado = document.getElementById('estado');
