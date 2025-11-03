@@ -1,6 +1,6 @@
 // ====== CONFIG ======
-const BACKEND_HTTP = 'https://macroclimatic-earline-pseudoarchaically.ngrok-free.dev';
-const WS_URL_HTTP  = 'wss://macroclimatic-earline-pseudoarchaically.ngrok-free.dev/ws';
+const BACKEND_HTTP = 'https://<tu-subdominio>.ngrok-free.dev';
+const WS_URL_HTTP  = 'wss://<tu-subdominio>.ngrok-free.dev/ws';
 
 
 // ====== UTIL ======
