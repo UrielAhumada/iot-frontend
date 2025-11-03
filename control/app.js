@@ -1,7 +1,7 @@
 // ====== CONFIG ======
-const BACKEND_HTTP = 'https://<tu-subdominio>.ngrok-free.dev';
-const WS_URL_HTTP  = 'wss://<tu-subdominio>.ngrok-free.dev/ws';
-
+const BACKEND_HTTP = 'https://macroclimatic-earline-pseudoarchaically.ngrok-free.dev';
+const WS_URL_HTTPS = 'wss://macroclimatic-earline-pseudoarchaically.ngrok-free.dev/ws';
+const WS_URL = WS_URL_HTTPS;
 
 // ====== UTIL ======
 const estado = document.getElementById('estado');
