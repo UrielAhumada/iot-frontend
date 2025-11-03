@@ -106,11 +106,22 @@
 
   <!-- App Script -->
   <script>
-  // ====== CONFIG (ngrok) ======
-const BACKEND_HTTP = 'https://macroclimatic-earline-pseudoarchaically.ngrok-free.dev';
-const WS_URL_HTTP  = 'ws://localhost:5500/ws';
-const WS_URL_HTTPS = 'wss://macroclimatic-earline-pseudoarchaically.ngrok-free.dev/ws';
-const WS_URL = (location.protocol === 'https:') ? WS_URL_HTTPS : WS_URL_HTTP;
+    // ====== CONFIG (Automático: GitHub / Local) ======
+
+  const IS_GITHUB = window.location.hostname.includes("github.io");
+
+  // Base del backend (HTTP REST)
+  const API_BASE = IS_GITHUB
+    ? "https://macroclimatic-earline-pseudoarchaically.ngrok-free.dev"  // ngrok activo
+    : "http://localhost:5500";                                          // entorno local
+
+  // WebSocket base (wss para HTTPS, ws para local)
+  const WS_URL = IS_GITHUB
+    ? "wss://macroclimatic-earline-pseudoarchaically.ngrok-free.dev/ws"
+    : "ws://localhost:5500/ws";
+
+  // Alias opcional (mantiene compatibilidad con código existente)
+  const BACKEND_HTTP = API_BASE;
 
   // ====== UTIL ======
   document.getElementById('year').textContent = new Date().getFullYear();

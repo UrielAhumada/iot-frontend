@@ -1,12 +1,20 @@
 // ====== CONFIG ======
-// ====== CONFIG ======
-const BACKEND_HTTP = 'https://macroclimatic-earline-pseudoarchaically.ngrok-free.dev';
 
-const WS_URL_HTTP  = 'ws://localhost:5500/ws'; // solo si abres la página por http://
-const WS_URL_HTTPS = 'wss://macroclimatic-earline-pseudoarchaically.ngrok-free.dev/ws';
+// Detecta si estamos en GitHub Pages o en entorno local
+const IS_GITHUB = window.location.hostname.includes("github.io");
 
-const WS_URL = (location.protocol === 'https:') ? WS_URL_HTTPS : WS_URL_HTTP;
+// Backend base
+const API_BASE = IS_GITHUB
+  ? "https://macroclimatic-earline-pseudoarchaically.ngrok-free.dev"   // ngrok público
+  : "http://localhost:5500";                                           // local dev
 
+// WebSocket base (wss si estamos en HTTPS, ws si en local)
+const WS_URL = IS_GITHUB
+  ? "wss://macroclimatic-earline-pseudoarchaically.ngrok-free.dev/ws"
+  : "ws://localhost:5500/ws";
+
+// (Opcional: si quieres mantener las variables previas, puedes conservarlas)
+const BACKEND_HTTP = API_BASE;
 
 // ====== UTIL ======
 const estado = document.getElementById('estado');
