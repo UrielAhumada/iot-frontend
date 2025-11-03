@@ -1,12 +1,6 @@
 // ====== CONFIG ======
-//// control/app.js y monitoreo/index.html
-const BACKEND_HTTP = 'http://18.212.218.2:5500';
-const WS_URL_HTTP  = 'ws://18.212.218.2:5500/ws';
-const WS_URL_HTTPS = 'wss://18.212.218.2/ws'; // solo servirá si pones HTTPS en EC2
-//const BACKEND_HTTP = 'http://localhost:5500';
-//const WS_URL_HTTP  = 'ws://localhost:5500/ws';
-//const WS_URL_HTTPS = 'wss://localhost/ws';
-const WS_URL = (location.protocol === 'https:') ? WS_URL_HTTPS : WS_URL_HTTP;
+const API_BASE = 'https://macroclimatic-earline-pseudoarchaically.ngrok-free.dev';
+const WS_URL   = 'wss://macroclimatic-earline-pseudoarchaically.ngrok-free.dev/ws';
 
 // ====== UTIL ======
 const estado = document.getElementById('estado');
@@ -83,7 +77,7 @@ async function postJSON(url, body){
 
 async function enviarMovimiento(status_clave){
   estado.textContent = 'ENVIANDO...';
-  const res = await postJSON(`${BACKEND_HTTP}/api/movimiento`, {
+  const res = await postJSON(`${API_BASE}/api/movimiento`, {
     status_clave, dispositivo_id:1, cliente_id:1
   });
   log(`REST movimiento OK → evento_id=${res.evento_id}`);
@@ -91,7 +85,7 @@ async function enviarMovimiento(status_clave){
 
 async function enviarObstaculo(obstaculo_clave){
   estado.textContent = 'REPORTANDO OBSTÁCULO...';
-  const res = await postJSON(`${BACKEND_HTTP}/api/obstaculo`, {
+  const res = await postJSON(`${API_BASE}/api/obstaculo`, {
     obstaculo_clave, dispositivo_id:1, cliente_id:1
   });
   log(`REST obstáculo OK → evento_id=${res.evento_id}`);
@@ -99,7 +93,7 @@ async function enviarObstaculo(obstaculo_clave){
 
 async function lanzarDemo(n){
   estado.textContent = `DEMO x${n}...`;
-  const r = await fetch(`${BACKEND_HTTP}/api/demo?n=${n}`, { method:'POST' });
+  const r = await fetch(`${API_BASE}/api/demo?n=${n}`, { method:'POST' });
   const j = await r.json();
   toast(`DEMO x${j.insertados} iniciada`, 'info');
   log(`REST demo OK → insertados=${j.insertados}`);

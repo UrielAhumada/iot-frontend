@@ -107,14 +107,9 @@
   <!-- App Script -->
   <script>
   // ====== CONFIG (ya con tu IP) ======
-  const BACKEND_HTTP = 'http://18.212.218.2:5500';
-const WS_URL_HTTP  = 'ws://18.212.218.2:5500/ws';
-const WS_URL_HTTPS = 'wss://18.212.218.2/ws'; // solo servirá si pones HTTPS en EC2
-//const BACKEND_HTTP = 'http://localhost:5500';
-//const WS_URL_HTTP  = 'ws://localhost:5500/ws';
-//const WS_URL_HTTPS = 'wss://localhost/ws';
-  const WS_URL = (location.protocol === 'https:') ? WS_URL_HTTPS : WS_URL_HTTP;
-
+  // ====== CONFIG (ngrok) ======
+  const BACKEND_HTTP = 'https://macroclimatic-earline-pseudoarchaically.ngrok-free.dev';
+  const WS_URL       = 'wss://macroclimatic-earline-pseudoarchaically.ngrok-free.dev/ws';
   // ====== UTIL ======
   document.getElementById('year').textContent = new Date().getFullYear();
   const wsState = document.getElementById('wsState');
