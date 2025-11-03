@@ -1,6 +1,7 @@
 // ====== CONFIG ======
-const API_BASE = 'https://macroclimatic-earline-pseudoarchaically.ngrok-free.dev';
-const WS_URL   = 'wss://macroclimatic-earline-pseudoarchaically.ngrok-free.dev/ws';
+const BACKEND_HTTP = 'https://macroclimatic-earline-pseudoarchaically.ngrok-free.dev';
+const WS_URL_HTTP  = 'wss://macroclimatic-earline-pseudoarchaically.ngrok-free.dev/ws';
+
 
 // ====== UTIL ======
 const estado = document.getElementById('estado');
