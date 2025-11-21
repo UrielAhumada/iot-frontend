@@ -2,36 +2,177 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <title>IoT Control • Simulación</title>
+  <title>Control Carrito IoT</title>
   <link rel="icon" type="image/x-icon" href="../favicon.ico">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <!-- Bootstrap -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
   <style>
-    :root{ --radius:16px; }
-    body { background:#0b1220; color:#dbe4ff; }
-    .card-ui{ border:0;border-radius:var(--radius);background:#0e1b33;color:#fff;box-shadow:0 16px 40px rgba(18,38,63,.45) }
-    .btn-pill{ border-radius:14px;padding:.6rem 1.2rem;font-weight:600 }
-    .status-dot{ display:inline-block;width:.65rem;height:.65rem;border-radius:50%;margin-right:.4rem }
-    .status-ok{background:#22c55e}.status-bad{background:#ef4444}
-    .brand-gradient{ background:linear-gradient(90deg,#38bdf8,#a855f7);-webkit-background-clip:text;background-clip:text;color:transparent }
-    footer{background:#0d6efd;color:#fff}
-    .card-kpi h2{font-weight:800;letter-spacing:.02em}
-    .fade-in{animation:fade .35s ease}@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+    :root{
+      --radius: 20px;
+      --bg: #020617;
+      --card: #0b1120;
+      --accent: #3b82f6;
+      --accent-soft: rgba(59,130,246,0.18);
+      --text: #e5e7eb;
+      --text-muted: #9ca3af;
+    }
+
+    body{
+      background: radial-gradient(circle at top, #1f2937, #020617);
+      color: var(--text);
+    }
+
+    .navbar{
+      background: linear-gradient(90deg,#1d4ed8,#0f172a);
+      box-shadow:0 10px 30px rgba(15,23,42,.7);
+    }
+
+    .brand-gradient{
+      background:linear-gradient(90deg,#38bdf8,#a855f7);
+      -webkit-background-clip:text;
+      background-clip:text;
+      color:transparent;
+    }
+
+    .card-ui{
+      border-radius:var(--radius);
+      background:var(--card);
+      border:1px solid rgba(148,163,184,.28);
+      box-shadow:0 18px 45px rgba(15,23,42,.75);
+      color:var(--text);
+    }
+
+    .card-kpi h2{
+      font-weight:800;
+      letter-spacing:.02em;
+    }
+
+    .status-dot{
+      display:inline-block;
+      width:.65rem;
+      height:.65rem;
+      border-radius:50%;
+      margin-right:.4rem;
+    }
+    .status-ok{background:#22c55e;box-shadow:0 0 10px #22c55e;}
+    .status-bad{background:#ef4444;box-shadow:0 0 10px #ef4444;}
+
+    .fade-in{animation:fade .3s ease}
+    @keyframes fade{
+      from{opacity:0;transform:translateY(6px)}
+      to{opacity:1;transform:none}
+    }
+
+    .btn-pill{
+      border-radius:14px;
+      padding:.55rem 1.15rem;
+      font-weight:600;
+    }
+
+    .card-ui .text-muted{
+      color:var(--text-muted)!important;
+    }
+
+    /* JOYSTICK */
+    #joystick-grid{
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap:10px;
+      justify-items:center;
+      align-items:center;
+      margin-top:6px;
+    }
+
+    .btn-control{
+      width:88px;
+      height:88px;
+      border-radius:18px;
+      border:1px solid #1f2937;
+      background: radial-gradient(circle at top, #1d4ed8, #020617);
+      color:#f9fafb;
+      font-size:.85rem;
+      font-weight:600;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      padding:6px;
+      line-height:1.1;
+      box-shadow:0 12px 28px rgba(15,23,42,.9);
+      transition:.12s;
+    }
+
+    .btn-control small{
+      font-size:.7rem;
+      opacity:.85;
+    }
+
+    .btn-control:hover{
+      transform:translateY(-1px) scale(1.03);
+      box-shadow:0 16px 40px rgba(15,23,42,1);
+      border-color:var(--accent);
+    }
+
+    .btn-control:active{
+      transform:translateY(1px) scale(.97);
+      box-shadow:none;
+    }
+
+    .btn-stop{
+      background: radial-gradient(circle at top, #b91c1c, #020617);
+      border-color:#b91c1c;
+    }
+
+    .btn-back{
+      background: radial-gradient(circle at top, #f59e0b, #020617);
+      border-color:#f59e0b;
+    }
+
+    /* Velocidad */
+    .speed-box{
+      margin-top:1rem;
+      padding:1rem 1.15rem;
+      border-radius:16px;
+      background:#020617;
+      border:1px solid rgba(148,163,184,.4);
+    }
+    .speed-value{
+      font-size:1.1rem;
+      font-weight:600;
+    }
+
+    .form-range::-webkit-slider-thumb{
+      background:#f9fafb;
+      border:2px solid var(--accent);
+      box-shadow:
+        0 0 0 4px var(--accent-soft),
+        0 10px 18px rgba(15,23,42,.9);
+    }
+
     .table-dark td,.table-dark th{color:#fff}
   </style>
 </head>
 <body>
   <!-- Navbar -->
-  <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+  <nav class="navbar navbar-expand-lg navbar-dark">
     <div class="container">
-      <a class="navbar-brand fw-bold" href="#"><span class="brand-gradient">IoT Control</span></a>
-      <button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#nav"><span class="navbar-toggler-icon"></span></button>
+      <a class="navbar-brand fw-bold" href="#">
+        <span class="brand-gradient">IoT Control</span>
+      </a>
+      <button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#nav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
       <div id="nav" class="collapse navbar-collapse">
         <ul class="navbar-nav ms-auto">
           <li class="nav-item"><a class="nav-link active" href="#">Control</a></li>
           <li class="nav-item"><a class="nav-link" href="../monitoreo/">Monitoreo</a></li>
-          <li class="nav-item"><a id="wsState" class="nav-link"><span class="status-dot status-bad"></span>WS</a></li>
+          <li class="nav-item">
+            <a id="wsState" class="nav-link">
+              <span class="status-dot status-bad"></span>WS
+            </a>
+          </li>
         </ul>
       </div>
     </div>
@@ -40,85 +181,165 @@
   <main class="container py-4">
     <!-- KPIs -->
     <div class="row g-3 mb-3">
-      <div class="col-12 col-md-4">
-        <div class="card card-ui card-kpi"><div class="card-body">
-          <div class="text-muted small">Último comando</div>
-          <h2 id="kpi-last" class="m-0 text-info">—</h2>
-        </div></div>
+      <div class="col-12 col-md-6">
+        <div class="card card-ui card-kpi">
+          <div class="card-body">
+            <div class="text-muted small">Último comando</div>
+            <h2 id="kpi-last" class="m-0 text-info">—</h2>
+          </div>
+        </div>
       </div>
-      <div class="col-12 col-md-4">
-        <div class="card card-ui card-kpi"><div class="card-body">
-          <div class="text-muted small">Obstáculo reciente</div>
-          <h2 id="kpi-obs" class="m-0 text-warning">—</h2>
-        </div></div>
-      </div>
-      <div class="col-12 col-md-4">
-        <div class="card card-ui card-kpi"><div class="card-body">
-          <div class="text-muted small">Simulación</div>
-          <h2 class="m-0 text-success">Activa</h2>
-        </div></div>
+      <div class="col-12 col-md-6">
+        <div class="card card-ui card-kpi">
+          <div class="card-body">
+            <div class="text-muted small">Obstáculo reciente</div>
+            <h2 id="kpi-obs" class="m-0 text-warning">—</h2>
+          </div>
+        </div>
       </div>
     </div>
 
     <!-- Panel de control -->
-    <div class="card card-ui mb-3"><div class="card-body">
-      <h3 class="text-center mb-4">APLICACIÓN DE CONTROL IoT (Simulada)</h3>
+    <div class="card card-ui mb-3">
+      <div class="card-body">
+        <h3 class="text-center mb-3">Control remoto del carrito IoT</h3>
 
-      <div class="row g-3 justify-content-center mb-2">
-        <div class="col-auto"><button class="btn btn-success text-light btn-pill" data-op="5">Vuelta Izquierda</button></div>
-        <div class="col-auto"><button class="btn btn-success text-light btn-pill" data-op="1">Adelante</button></div>
-        <div class="col-auto"><button class="btn btn-success text-light btn-pill" data-op="4">Vuelta derecha</button></div>
-      </div>
+        <!-- JOYSTICK DE MOVIMIENTOS (1–7) -->
+        <!-- Usamos los nombres de tu tabla -->
+        <div id="joystick-grid">
+          <!-- fila superior -->
+          <div></div>
+          <!-- 1 Adelante -->
+          <button class="btn-control" data-op="1">
+            ▲<br><small>Adelante</small>
+          </button>
+          <div></div>
 
-      <div class="row g-3 justify-content-center mb-2">
-        <div class="col-auto"><button class="btn btn-primary text-light btn-pill" data-op="11">360° izquierda</button></div>
-        <div class="col-auto"><button class="btn btn-primary text-light btn-pill" data-op="9">90° izquierda</button></div>
-        <div class="col-auto"><button class="btn btn-danger  text-light btn-pill" data-op="3">Detener</button></div>
-        <div class="col-auto"><button class="btn btn-primary text-light btn-pill" data-op="8">90° derecha</button></div>
-        <div class="col-auto"><button class="btn btn-primary text-light btn-pill" data-op="10">360° derecha</button></div>
-      </div>
+          <!-- fila media -->
+          <!-- 5 Vuelta adelante izquierda -->
+          <button class="btn-control" data-op="5">
+            ↖<br><small>Vuelta adelante<br>izquierda</small>
+          </button>
 
-      <div class="row g-3 justify-content-center mb-3">
-        <div class="col-auto"><button class="btn btn-warning btn-pill" data-op="5">Vuelta Izquierda</button></div>
-        <div class="col-auto"><button class="btn btn-warning btn-pill" data-op="2">Atrás</button></div>
-        <div class="col-auto"><button class="btn btn-warning btn-pill" data-op="4">Vuelta derecha</button></div>
-      </div>
+          <!-- 3 Detener -->
+          <button class="btn-control btn-stop" data-op="3">
+            ■<br><small>Detener</small>
+          </button>
 
-      <!-- Obstáculos -->
-      <div class="text-center my-3">
-        <div class="btn-group">
-          <button class="btn btn-outline-danger btn-pill" data-ob="1">Obstáculo: Adelante</button>
-          <button class="btn btn-outline-danger btn-pill" data-ob="2">Obstáculo: Adelante-Izq</button>
-          <button class="btn btn-outline-danger btn-pill" data-ob="3">Obstáculo: Adelante-Der</button>
-          <button class="btn btn-outline-danger btn-pill" data-ob="5">Obstáculo: Retrocede</button>
+          <!-- 4 Vuelta adelante derecha -->
+          <button class="btn-control" data-op="4">
+            ↗<br><small>Vuelta adelante<br>derecha</small>
+          </button>
+
+          <!-- fila inferior -->
+          <!-- 7 Vuelta atrás izquierda -->
+          <button class="btn-control btn-back" data-op="7">
+            ↙<br><small>Vuelta atrás<br>izquierda</small>
+          </button>
+
+          <!-- 2 Atrás -->
+          <button class="btn-control btn-back" data-op="2">
+            ▼<br><small>Atrás</small>
+          </button>
+
+          <!-- 6 Vuelta atrás derecha -->
+          <button class="btn-control btn-back" data-op="6">
+            ↘<br><small>Vuelta atrás<br>derecha</small>
+          </button>
+        </div>
+
+        <!-- GIROS (8–11) -->
+        <div class="mt-4 text-center">
+          <div class="text-muted small mb-1">Giros</div>
+          <div class="d-flex flex-wrap justify-content-center gap-2">
+            <!-- 9 Giro 90° izquierda -->
+            <button class="btn btn-outline-info btn-pill" data-op="9">
+              Giro 90° izquierda
+            </button>
+            <!-- 8 Giro 90° derecha -->
+            <button class="btn btn-outline-info btn-pill" data-op="8">
+              Giro 90° derecha
+            </button>
+            <!-- 11 Giro 360° izquierda -->
+            <button class="btn btn-outline-light btn-pill" data-op="11">
+              Giro 360° izquierda
+            </button>
+            <!-- 10 Giro 360° derecha -->
+            <button class="btn btn-outline-light btn-pill" data-op="10">
+              Giro 360° derecha
+            </button>
+          </div>
+        </div>
+
+        <!-- Control de velocidad -->
+        <div class="speed-box">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="text-muted small text-uppercase">Velocidad</span>
+            <span class="speed-value" id="speedValue">60%</span>
+          </div>
+          <input type="range" class="form-range" min="0" max="100" value="60" id="speed">
+        </div>
+
+        <!-- Obstáculos -->
+        <div class="text-center my-3">
+          <div class="text-muted small mb-1">Obstáculos</div>
+          <div class="btn-group flex-wrap">
+            <!-- Tabla de obstáculos -->
+            <!-- 1 Adelante -->
+            <button class="btn btn-outline-danger btn-pill" data-ob="1">
+              Adelante
+            </button>
+            <!-- 2 Adelante-Izquierda -->
+            <button class="btn btn-outline-danger btn-pill" data-ob="2">
+              Adelante-Izquierda
+            </button>
+            <!-- 3 Adelante-Derecha -->
+            <button class="btn btn-outline-danger btn-pill" data-ob="3">
+              Adelante-Derecha
+            </button>
+            <!-- 4 Adelante-Izquierda-Derecha -->
+            <button class="btn btn-outline-danger btn-pill" data-ob="4">
+              Adelante-Izq-Der
+            </button>
+            <!-- 5 Retrocede -->
+            <button class="btn btn-outline-danger btn-pill" data-ob="5">
+              Retrocede
+            </button>
+          </div>
+        </div>
+
+        <!-- Demos -->
+        <div class="text-center my-2">
+          <div class="text-muted small mb-1">Demos</div>
+          <div class="btn-group flex-wrap">
+            <button class="btn btn-outline-secondary btn-pill" data-demo="3">DEMO x3</button>
+            <button class="btn btn-outline-secondary btn-pill" data-demo="5">DEMO x5</button>
+            <button class="btn btn-outline-secondary btn-pill" data-demo="10">DEMO x10</button>
+          </div>
+        </div>
+
+        <!-- Estado -->
+        <div class="text-center mt-3">
+          <div id="estado" class="text-info fw-bold">
+            ESPERANDO COMANDO
+          </div>
         </div>
       </div>
-
-      <!-- Demos -->
-      <div class="text-center my-2">
-        <div class="btn-group">
-          <button class="btn btn-outline-secondary btn-pill" data-demo="3">DEMO x3</button>
-          <button class="btn btn-outline-secondary btn-pill" data-demo="5">DEMO x5</button>
-          <button class="btn btn-outline-secondary btn-pill" data-demo="10">DEMO x10</button>
-        </div>
-      </div>
-
-      <div class="text-center mt-4">
-        <div id="estado" class="text-info fw-bold">ESPERANDO COMANDO</div>
-      </div>
-    </div></div>
+    </div>
 
     <!-- Log -->
-    <div class="card card-ui"><div class="card-body">
-      <h5 class="mb-2">Actividad reciente</h5>
-      <ul id="log" class="list-group list-group-flush small"></ul>
-    </div></div>
+    <div class="card card-ui">
+      <div class="card-body">
+        <h5 class="mb-2">Actividad reciente</h5>
+        <ul id="log" class="list-group list-group-flush small"></ul>
+      </div>
+    </div>
   </main>
 
   <footer class="py-3">
     <div class="container d-flex flex-column flex-sm-row justify-content-between">
       <span>© <span id="year"></span> Uriel Ahumada Huerta — Proyecto IoT</span>
-      <span>Desarrollado con Bootstrap • Simulación activa</span>
+      <span>Control del carrito en tiempo real</span>
     </div>
   </footer>
 
@@ -126,5 +347,14 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="./app.js"></script>
+
+  <!-- Solo comportamiento visual del slider -->
+  <script>
+    const slider = document.getElementById('speed');
+    const speedValue = document.getElementById('speedValue');
+    slider.addEventListener('input', () => {
+      speedValue.textContent = slider.value + '%';
+    });
+  </script>
 </body>
 </html>

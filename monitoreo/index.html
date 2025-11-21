@@ -5,32 +5,103 @@
   <title>IoT Monitoreo • Tiempo real</title>
   <link rel="icon" type="image/x-icon" href="../favicon.ico">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+
   <!-- Bootstrap + Chart.js -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  >
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+
   <style>
-    :root{ --radius:16px; }
-    body { background:#0b1220; color:#dbe4ff; }
-    .navbar, footer { background:#0b1b3a !important; }
-    .card-ui{ border:0;border-radius:var(--radius);background:#0e1b33;color:#fff;box-shadow:0 16px 40px rgba(18,38,63,.45) }
-    .status-dot{ display:inline-block;width:.65rem;height:.65rem;border-radius:50%;margin-right:.4rem }
-    .status-ok{background:#22c55e}.status-bad{background:#ef4444}
-    .brand-gradient{ background:linear-gradient(90deg,#38bdf8,#a855f7);-webkit-background-clip:text;background-clip:text;color:transparent }
-    .fade-in{animation:fade .35s ease}@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+    :root{
+      --radius: 20px;
+      --bg: #020617;
+      --card: #0b1120;
+      --accent: #3b82f6;
+      --accent-soft: rgba(59,130,246,0.18);
+      --text: #e5e7eb;
+      --text-muted: #9ca3af;
+    }
+
+    body{
+      background: radial-gradient(circle at top, #1f2937, #020617);
+      color: var(--text);
+    }
+
+    .navbar, footer{
+      background: linear-gradient(90deg,#1d4ed8,#0f172a) !important;
+      color:#e5e7eb;
+      box-shadow:0 10px 30px rgba(15,23,42,.7);
+    }
+
+    .brand-gradient{
+      background:linear-gradient(90deg,#38bdf8,#a855f7);
+      -webkit-background-clip:text;
+      background-clip:text;
+      color:transparent;
+    }
+
+    .card-ui{
+      border-radius:var(--radius);
+      background:var(--card);
+      border:1px solid rgba(148,163,184,.28);
+      box-shadow:0 18px 45px rgba(15,23,42,.75);
+      color:var(--text);
+    }
+
+    .card-ui .text-muted{
+      color:var(--text-muted) !important;
+    }
+
+    .status-dot{
+      display:inline-block;
+      width:.65rem;
+      height:.65rem;
+      border-radius:50%;
+      margin-right:.4rem;
+    }
+    .status-ok{background:#22c55e;box-shadow:0 0 10px #22c55e;}
+    .status-bad{background:#ef4444;box-shadow:0 0 10px #ef4444;}
+
+    .fade-in{animation:fade .35s ease}
+    @keyframes fade{
+      from{opacity:0;transform:translateY(6px)}
+      to{opacity:1;transform:none}
+    }
+
     .table-dark td,.table-dark th{color:#fff}
+
+    .badge-soft{
+      background-color: var(--accent-soft);
+      color: #bfdbfe;
+      border:1px solid rgba(59,130,246,.7);
+    }
   </style>
 </head>
 <body>
   <!-- Navbar -->
   <nav class="navbar navbar-expand-lg navbar-dark">
     <div class="container">
-      <a class="navbar-brand fw-bold" href="../control/"><span class="brand-gradient">IoT Monitoreo</span></a>
-      <button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#nav"><span class="navbar-toggler-icon"></span></button>
+      <a class="navbar-brand fw-bold" href="../control/">
+        <span class="brand-gradient">IoT Monitoreo</span>
+      </a>
+      <button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#nav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
       <div id="nav" class="collapse navbar-collapse">
         <ul class="navbar-nav ms-auto">
-          <li class="nav-item"><a class="nav-link" href="../control/">Control</a></li>
-          <li class="nav-item"><a class="nav-link active" href="#">Monitoreo</a></li>
-          <li class="nav-item"><a id="wsState" class="nav-link"><span class="status-dot status-bad"></span>WS Reconectando…</a></li>
+          <li class="nav-item">
+            <a class="nav-link" href="../control/">Control</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link active" href="#">Monitoreo</a>
+          </li>
+          <li class="nav-item">
+            <a id="wsState" class="nav-link">
+              <span class="status-dot status-bad"></span>WS Reconectando…
+            </a>
+          </li>
         </ul>
       </div>
     </div>
@@ -38,56 +109,79 @@
 
   <main class="container py-4">
     <div class="row g-3 mb-3">
+      <!-- Gráfica -->
       <div class="col-12 col-lg-7">
         <div class="card card-ui h-100">
           <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-2">
               <h5 class="m-0">Eventos por minuto (últimos 10)</h5>
-              <span class="badge text-bg-secondary" id="badgeTotal">0 eventos</span>
+              <span class="badge badge-soft" id="badgeTotal">0 eventos</span>
             </div>
             <canvas id="chart" height="110"></canvas>
           </div>
         </div>
       </div>
+
+      <!-- KPIs -->
       <div class="col-12 col-lg-5">
-        <div class="card card-ui h-100"><div class="card-body">
-          <h5>KPIs</h5>
-          <div class="row g-3">
-            <div class="col-6">
-              <div class="p-3 rounded-3" style="background:#12244a;">
-                <div class="text-muted small">Último movimiento</div>
-                <div id="k-mov" class="fs-4 fw-bold text-info">—</div>
+        <div class="card card-ui h-100">
+          <div class="card-body">
+            <h5>KPIs</h5>
+            <div class="row g-3">
+              <div class="col-6">
+                <div class="p-3 rounded-3" style="background:#111827;">
+                  <div class="text-muted small">Último movimiento</div>
+                  <div id="k-mov" class="fs-4 fw-bold text-info">—</div>
+                </div>
               </div>
-            </div>
-            <div class="col-6">
-              <div class="p-3 rounded-3" style="background:#12244a;">
-                <div class="text-muted small">Último obstáculo</div>
-                <div id="k-obs" class="fs-4 fw-bold text-warning">—</div>
+              <div class="col-6">
+                <div class="p-3 rounded-3" style="background:#111827;">
+                  <div class="text-muted small">Último obstáculo</div>
+                  <div id="k-obs" class="fs-4 fw-bold text-warning">—</div>
+                </div>
               </div>
             </div>
           </div>
-        </div></div>
+        </div>
       </div>
     </div>
 
+    <!-- Tablas -->
     <div class="row g-3">
       <div class="col-12 col-lg-6">
-        <div class="card card-ui h-100"><div class="card-body">
-          <h5 class="mb-2">Stream en tiempo real</h5>
-          <table class="table table-sm table-dark align-middle">
-            <thead><tr><th>TS</th><th>Tipo</th><th>Detalle</th></tr></thead>
-            <tbody id="tb-live"></tbody>
-          </table>
-        </div></div>
+        <div class="card card-ui h-100">
+          <div class="card-body">
+            <h5 class="mb-2">Stream en tiempo real</h5>
+            <table class="table table-sm table-dark align-middle">
+              <thead>
+                <tr>
+                  <th>TS</th>
+                  <th>Tipo</th>
+                  <th>Detalle</th>
+                </tr>
+              </thead>
+              <tbody id="tb-live"></tbody>
+            </table>
+          </div>
+        </div>
       </div>
+
       <div class="col-12 col-lg-6">
-        <div class="card card-ui h-100"><div class="card-body">
-          <h5 class="mb-2">Últimos movimientos</h5>
-          <table class="table table-sm table-dark align-middle">
-            <thead><tr><th>TS</th><th>Mov.</th><th>Disp.</th></tr></thead>
-            <tbody id="tb-hist"></tbody>
-          </table>
-        </div></div>
+        <div class="card card-ui h-100">
+          <div class="card-body">
+            <h5 class="mb-2">Últimos movimientos</h5>
+            <table class="table table-sm table-dark align-middle">
+              <thead>
+                <tr>
+                  <th>TS</th>
+                  <th>Mov.</th>
+                  <th>Disp.</th>
+                </tr>
+              </thead>
+              <tbody id="tb-hist"></tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   </main>
@@ -95,7 +189,7 @@
   <footer class="py-3">
     <div class="container d-flex flex-column flex-sm-row justify-content-between">
       <span>© <span id="year"></span> Uriel Ahumada Huerta — Proyecto IoT</span>
-      <span>Desarrollado con Bootstrap • Simulación activa</span>
+      <span>Monitoreo en tiempo real</span>
     </div>
   </footer>
 
@@ -105,119 +199,7 @@
   <!-- Libs -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-  <!-- App Script -->
-  <script>
-    // ====== CONFIG (Automático: GitHub / Local) ======
-
-  const IS_GITHUB = window.location.hostname.includes("github.io");
-
-  // Base del backend (HTTP REST)
-  const API_BASE = IS_GITHUB
-    ? "https://macroclimatic-earline-pseudoarchaically.ngrok-free.dev"  // ngrok activo
-    : "http://localhost:5500";                                          // entorno local
-
-  // WebSocket base (wss para HTTPS, ws para local)
-  const WS_URL = IS_GITHUB
-    ? "wss://macroclimatic-earline-pseudoarchaically.ngrok-free.dev/ws"
-    : "ws://localhost:5500/ws";
-
-  // Alias opcional (mantiene compatibilidad con código existente)
-  const BACKEND_HTTP = API_BASE;
-
-  // ====== UTIL ======
-  document.getElementById('year').textContent = new Date().getFullYear();
-  const wsState = document.getElementById('wsState');
-  function wsIndicator(ok){
-    wsState.innerHTML = ok
-      ? `<span class="status-dot status-ok"></span>WS Conectado`
-      : `<span class="status-dot status-bad"></span>WS Reconectando…`;
-  }
-  function toast(msg, type='primary'){
-    const el = document.createElement('div');
-    el.className = `toast align-items-center text-bg-${type} border-0`;
-    el.innerHTML = `<div class="d-flex"><div class="toast-body">${msg}</div>
-      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>`;
-    document.getElementById('toasts').appendChild(el);
-    new bootstrap.Toast(el, { delay: 2200 }).show();
-  }
-  async function apiGet(path){
-    const r = await fetch(`${BACKEND_HTTP}${path}`, {
-      // 👇 evita la página de advertencia de ngrok
-      headers: { "ngrok-skip-browser-warning": "1" },
-      // (opcional) fuerza a no usar caché del navegador/CDN
-      cache: "no-store"
-    });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    return r.json();
-  }
-  
-  // ====== Chart ======
-  const labels = Array.from({length:10}, (_,i)=>`${i-9}m`);
-  let points = new Array(10).fill(0);
-  const chartColors = {
-    line: '#38bdf8',
-    fill: 'rgba(56,189,248,0.25)',
-    grid: '#294269',
-    tick: '#c7d2fe',
-    legend: '#ffffff'
-  };
-  const chart = new Chart(document.getElementById('chart'), {
-    type:'line',
-    data:{ labels, datasets:[{ label:'Eventos', data:points, tension:.35, borderWidth:2, borderColor:chartColors.line, backgroundColor:chartColors.fill, fill:true }]},
-    options:{
-      animation:false,
-      plugins:{ legend:{ labels:{ color:chartColors.legend } } },
-      scales:{
-        x:{ ticks:{ color:chartColors.tick }, grid:{ color:chartColors.grid }},
-        y:{ beginAtZero:true, ticks:{ color:chartColors.tick, precision:0 }, grid:{ color:chartColors.grid }}
-      }
-    }
-  });
-  setInterval(()=>{ points.shift(); points.push(0); chart.update('none'); }, 60000);
-  let total=0; const badgeTotal=document.getElementById('badgeTotal');
-  function bump(){ points[points.length-1]++; total++; badgeTotal.textContent=`${total} eventos`; chart.update('none'); }
-
-  // ====== DOM ======
-  const tbLive = document.getElementById('tb-live');
-  const tbHist = document.getElementById('tb-hist');
-  const kMov = document.getElementById('k-mov');
-  const kObs = document.getElementById('k-obs');
-
-  function addLiveRow(tipo, detalle){
-    const tr = document.createElement('tr');
-    tr.className='fade-in';
-    tr.innerHTML = `<td>${new Date().toLocaleTimeString()}</td><td>${tipo}</td><td><pre class="m-0 text-white-50">${detalle}</pre></td>`;
-    tbLive.prepend(tr); bump();
-  }
-
-  // ====== Init: historial + WS ======
-  (async function(){
-    try{
-      const hist = await apiGet('/api/ultimos-mov?limit=10');
-      hist.forEach(it=>{
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${new Date(it.fecha_hora).toLocaleString()}</td><td>${it.movimiento}</td><td>${it.dispositivo}</td>`;
-        tbHist.appendChild(tr);
-        kMov.textContent = it.movimiento;
-      });
-    }catch(e){ toast('No se pudo cargar historial','danger'); }
-  })();
-
-  let ws;
-  (function connectWS(){
-    ws = new WebSocket(WS_URL);
-    ws.onopen = ()=> wsIndicator(true);
-    ws.onmessage = (ev)=>{
-      try{
-        const m = JSON.parse(ev.data);
-        if(m.type==='hello') return;
-        if(m.type==='command'){ addLiveRow('command', JSON.stringify(m.data)); kMov.textContent=`#${m.data.status_clave}`; }
-        if(m.type==='obstacle'){ addLiveRow('obstacle', JSON.stringify(m.data)); kObs.textContent=`#${m.data.obstaculo_clave}`; }
-        if(m.type==='device-ack' || m.type==='device-ack-obstacle' || m.type==='demo'){ addLiveRow(m.type, JSON.stringify(m.data)); }
-      }catch{}
-    };
-    ws.onclose = ()=>{ wsIndicator(false); setTimeout(connectWS, 1200); };
-  })();
-  </script>
+  <!-- Script de la app -->
+  <script src="./app.js"></script>
 </body>
 </html>

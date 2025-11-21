@@ -17,18 +17,31 @@ const WS_URL = IS_GITHUB
 const BACKEND_HTTP = API_BASE;
 
 // ====== UTIL ======
-const estado = document.getElementById('estado');
-const logEl  = document.getElementById('log');
-const kpiLast= document.getElementById('kpi-last');
-const kpiObs = document.getElementById('kpi-obs');
-const wsState= document.getElementById('wsState');
-document.getElementById('year').textContent = new Date().getFullYear();
+const estado     = document.getElementById('estado');
+const logEl      = document.getElementById('log');
+const kpiLast    = document.getElementById('kpi-last');
+const kpiObs     = document.getElementById('kpi-obs');
+const wsState    = document.getElementById('wsState');
+const speedSlider = document.getElementById('speed');   // slider de velocidad
+
+const yearSpan = document.getElementById('year');
+if (yearSpan) {
+  yearSpan.textContent = new Date().getFullYear();
+}
+
+// Devuelve la velocidad actual del slider (0–100)
+function getVelocidad() {
+  if (!speedSlider) return 0;
+  const v = parseInt(speedSlider.value, 10);
+  return Number.isNaN(v) ? 0 : v;
+}
 
 function wsIndicator(ok){
   wsState.innerHTML = ok
     ? `<span class="status-dot status-ok"></span>WS Conectado`
     : `<span class="status-dot status-bad"></span>WS Reconectando…`;
 }
+
 function toast(msg, type='primary'){
   const el = document.createElement('div');
   el.className = `toast align-items-center text-bg-${type} border-0 fade-in`;
@@ -37,6 +50,7 @@ function toast(msg, type='primary'){
   document.getElementById('toasts').appendChild(el);
   new bootstrap.Toast(el, { delay: 2200 }).show();
 }
+
 function log(line){
   const li = document.createElement('li');
   li.className = 'list-group-item fade-in bg-dark text-light';
@@ -60,7 +74,8 @@ let ws;
           log(`command → status=${m.data.status_clave}`);
         }
         if (m.type === 'device-ack') {
-          toast('ACK del dispositivo (simulado)','success');
+          // Quitamos la palabra "simulado"
+          toast('ACK del dispositivo','success');
         }
         if (m.type === 'obstacle') {
           estado.textContent = 'OBSTÁCULO ' + m.data.obstaculo_clave;
@@ -89,12 +104,16 @@ async function postJSON(url, body){
   return r.json();
 }
 
-async function enviarMovimiento(status_clave){
+// Ahora enviamos también la velocidad
+async function enviarMovimiento(status_clave, velocidad){
   estado.textContent = 'ENVIANDO...';
   const res = await postJSON(`${API_BASE}/api/movimiento`, {
-    status_clave, dispositivo_id:1, cliente_id:1
+    status_clave,
+    velocidad,          // se manda al backend
+    dispositivo_id: 1,
+    cliente_id: 1
   });
-  log(`REST movimiento OK → evento_id=${res.evento_id}`);
+  log(`REST movimiento OK → evento_id=${res.evento_id} vel=${velocidad}`);
 }
 
 async function enviarObstaculo(obstaculo_clave){
@@ -116,19 +135,36 @@ async function lanzarDemo(n){
 // ====== Eventos UI ======
 document.querySelectorAll('[data-op]').forEach(b=>{
   b.addEventListener('click', async ()=>{
-    try { await enviarMovimiento(parseInt(b.dataset.op,10)); }
-    catch(e){ toast('Error enviando movimiento','danger'); log('ERROR movimiento: '+e.message); estado.textContent='ERROR'; }
+    try {
+      const op  = parseInt(b.dataset.op, 10);
+      const vel = getVelocidad();          // leemos el slider
+      await enviarMovimiento(op, vel);     // y lo mandamos
+    } catch(e){
+      toast('Error enviando movimiento','danger');
+      log('ERROR movimiento: '+e.message);
+      estado.textContent='ERROR';
+    }
   });
 });
+
 document.querySelectorAll('[data-ob]').forEach(b=>{
   b.addEventListener('click', async ()=>{
     try { await enviarObstaculo(parseInt(b.dataset.ob,10)); }
-    catch(e){ toast('Error reportando obstáculo','danger'); log('ERROR obstáculo: '+e.message); estado.textContent='ERROR'; }
+    catch(e){
+      toast('Error reportando obstáculo','danger');
+      log('ERROR obstáculo: '+e.message);
+      estado.textContent='ERROR';
+    }
   });
 });
+
 document.querySelectorAll('[data-demo]').forEach(b=>{
   b.addEventListener('click', async ()=>{
     try { await lanzarDemo(parseInt(b.dataset.demo,10)); }
-    catch(e){ toast('Error en DEMO','danger'); log('ERROR demo: '+e.message); estado.textContent='ERROR'; }
+    catch(e){
+      toast('Error en DEMO','danger');
+      log('ERROR demo: '+e.message);
+      estado.textContent='ERROR';
+    }
   });
 });
