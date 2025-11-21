@@ -187,7 +187,7 @@ setInterval(pollLatestMovimiento, 4000);
 // ====== (Opcional) POLLING PARA ÚLTIMO OBSTÁCULO ======
 // Si tu backend tiene un endpoint similar, por ejemplo
 // /api/ultimos-obstaculos?limit=1, puedes descomentar y ajustar:
-/*
+
 async function pollLatestObstaculo() {
   try {
     const data = await apiGet("/api/ultimos-obstaculos?limit=1");
@@ -200,7 +200,6 @@ async function pollLatestObstaculo() {
   }
 }
 setInterval(pollLatestObstaculo, 5000);
-*/
 
 // ====== WebSocket (si tu backend sí envía algo, también lo veremos) ======
 let ws;
@@ -219,8 +218,18 @@ function safeParseJSON(text) {
   }
 
   ws.onopen = () => {
-    wsIndicator(true);
-  };
+  wsIndicator(true);
+
+  // handshake obligatorio para registrarse en ws_hub
+  try {
+    ws.send(JSON.stringify({
+      type: "hello",
+      from: "monitor"
+    }));
+  } catch (e) {
+    console.warn("Error enviando handshake WS:", e);
+  }
+};
 
   ws.onmessage = (ev) => {
     const raw = ev.data;
