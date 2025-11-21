@@ -1,29 +1,23 @@
-// ====== CONFIG (Automático: GitHub / Local) ======
+// ====== CONFIG (GitHub / Local) ======
 
 const IS_GITHUB = window.location.hostname.includes("github.io");
 
-// Base del backend (HTTP REST)
 const API_BASE = IS_GITHUB
-  ? "https://macroclimatic-earline-pseudoarchaically.ngrok-free.dev"  // ngrok activo
-  : "http://localhost:5500";                                          // entorno local
+  ? "https://macroclimatic-earline-pseudoarchaically.ngrok-free.dev"
+  : "http://localhost:5500";
 
-// WebSocket base (wss para HTTPS, ws para local)
 const WS_URL = IS_GITHUB
   ? "wss://macroclimatic-earline-pseudoarchaically.ngrok-free.dev/ws"
   : "ws://localhost:5500/ws";
 
-// Alias opcional (mantiene compatibilidad con código existente)
-const BACKEND_HTTP = API_BASE;
+const BACKEND_HTTP = API_BASE; // alias por si lo usas en backend
 
 // ====== UTIL ======
-const yearSpan = document.getElementById("year");
-if (yearSpan) {
-  yearSpan.textContent = new Date().getFullYear();
-}
-
+document.getElementById("year").textContent = new Date().getFullYear();
 const wsState = document.getElementById("wsState");
 
 function wsIndicator(ok) {
+  if (!wsState) return;
   wsState.innerHTML = ok
     ? `<span class="status-dot status-ok"></span>WS Conectado`
     : `<span class="status-dot status-bad"></span>WS Reconectando…`;
@@ -50,7 +44,7 @@ async function apiGet(path) {
   return r.json();
 }
 
-// ====== Chart ======
+// ====== Chart (Eventos por minuto) ======
 const labels = Array.from({ length: 10 }, (_, i) => `${i - 9}m`);
 let points = new Array(10).fill(0);
 
@@ -62,8 +56,7 @@ const chartColors = {
   legend: "#ffffff",
 };
 
-const chartCtx = document.getElementById("chart");
-const chart = new Chart(chartCtx, {
+const chart = new Chart(document.getElementById("chart"), {
   type: "line",
   data: {
     labels,
@@ -98,7 +91,7 @@ const chart = new Chart(chartCtx, {
   },
 });
 
-// Cada minuto movemos la ventana de 10 puntos
+// Ventana deslizante de 10 minutos
 setInterval(() => {
   points.shift();
   points.push(0);
@@ -107,21 +100,21 @@ setInterval(() => {
 
 let total = 0;
 const badgeTotal = document.getElementById("badgeTotal");
-
 function bump() {
   points[points.length - 1]++;
   total++;
-  badgeTotal.textContent = `${total} eventos`;
+  if (badgeTotal) badgeTotal.textContent = `${total} eventos`;
   chart.update("none");
 }
 
-// ====== DOM ======
+// ====== DOM de tablas y KPIs ======
 const tbLive = document.getElementById("tb-live");
 const tbHist = document.getElementById("tb-hist");
 const kMov = document.getElementById("k-mov");
 const kObs = document.getElementById("k-obs");
 
 function addLiveRow(tipo, detalle) {
+  if (!tbLive) return;
   const tr = document.createElement("tr");
   tr.className = "fade-in";
   tr.innerHTML = `
@@ -132,10 +125,11 @@ function addLiveRow(tipo, detalle) {
   bump();
 }
 
-// ====== Init: historial ======
-(async function loadHistorial() {
+// ====== Cargar historial inicial ======
+(async function loadHist() {
   try {
     const hist = await apiGet("/api/ultimos-mov?limit=10");
+    if (!Array.isArray(hist)) return;
     hist.forEach((it) => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
@@ -143,44 +137,62 @@ function addLiveRow(tipo, detalle) {
         <td>${it.movimiento}</td>
         <td>${it.dispositivo}</td>`;
       tbHist.appendChild(tr);
+      // Último movimiento del historial como valor inicial
       kMov.textContent = it.movimiento;
     });
   } catch (e) {
+    console.error(e);
     toast("No se pudo cargar historial", "danger");
   }
 })();
 
 // ====== WebSocket tiempo real ======
 let ws;
-(function connectWS() {
-  ws = new WebSocket(WS_URL);
 
-  ws.onopen = () => wsIndicator(true);
+function safeParseJSON(text) {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+(function connectWS() {
+  try {
+    ws = new WebSocket(WS_URL);
+  } catch (e) {
+    console.error("Error creando WS:", e);
+    wsIndicator(false);
+    return;
+  }
+
+  ws.onopen = () => {
+    wsIndicator(true);
+  };
 
   ws.onmessage = (ev) => {
-    try {
-      const m = JSON.parse(ev.data);
-      if (m.type === "hello") return;
+    const raw = ev.data;
+    const m = safeParseJSON(raw);
 
-      if (m.type === "command") {
-        addLiveRow("command", JSON.stringify(m.data));
-        kMov.textContent = `#${m.data.status_clave}`;
-      }
+    // Si no se puede parsear, lo mostramos como texto plano
+    if (!m) {
+      addLiveRow("raw", raw);
+      return;
+    }
 
-      if (m.type === "obstacle") {
-        addLiveRow("obstacle", JSON.stringify(m.data));
-        kObs.textContent = `#${m.data.obstaculo_clave}`;
-      }
+    // Si hay un type, úsalo; si no, muestra "msg"
+    const tipo = m.type || "msg";
+    const detalle = JSON.stringify(m.data ?? m);
 
-      if (
-        m.type === "device-ack" ||
-        m.type === "device-ack-obstacle" ||
-        m.type === "demo"
-      ) {
-        addLiveRow(m.type, JSON.stringify(m.data));
-      }
-    } catch {
-      // Ignora mensajes mal formateados
+    addLiveRow(tipo, detalle);
+
+    // Actualizar KPIs si coincide con lo que esperamos
+    if (m.type === "command" && m.data && m.data.status_clave != null) {
+      kMov.textContent = `#${m.data.status_clave}`;
+    }
+
+    if (m.type === "obstacle" && m.data && m.data.obstaculo_clave != null) {
+      kObs.textContent = `#${m.data.obstaculo_clave}`;
     }
   };
 
