@@ -10,7 +10,7 @@ const WS_URL = IS_GITHUB
   ? "wss://macroclimatic-earline-pseudoarchaically.ngrok-free.dev/ws"
   : "ws://localhost:5500/ws";
 
-const BACKEND_HTTP = API_BASE; // alias por si lo usas en backend
+const BACKEND_HTTP = API_BASE; // alias
 
 // ====== UTIL ======
 document.getElementById("year").textContent = new Date().getFullYear();
@@ -107,11 +107,11 @@ function bump() {
   chart.update("none");
 }
 
-// ====== DOM de tablas y KPIs ======
+// ====== DOM ======
 const tbLive = document.getElementById("tb-live");
 const tbHist = document.getElementById("tb-hist");
-const kMov = document.getElementById("k-mov");
-const kObs = document.getElementById("k-obs");
+const kMov   = document.getElementById("k-mov");
+const kObs   = document.getElementById("k-obs");
 
 function addLiveRow(tipo, detalle) {
   if (!tbLive) return;
@@ -125,20 +125,27 @@ function addLiveRow(tipo, detalle) {
   bump();
 }
 
-// ====== Cargar historial inicial ======
+// ====== Historial inicial y última marca ======
+let lastMovKey = null;   // guardaremos algo que identifique el último movimiento
+
 (async function loadHist() {
   try {
     const hist = await apiGet("/api/ultimos-mov?limit=10");
     if (!Array.isArray(hist)) return;
-    hist.forEach((it) => {
+
+    hist.forEach((it, idx) => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td>${new Date(it.fecha_hora).toLocaleString()}</td>
         <td>${it.movimiento}</td>
         <td>${it.dispositivo}</td>`;
       tbHist.appendChild(tr);
-      // Último movimiento del historial como valor inicial
-      kMov.textContent = it.movimiento;
+
+      // El último del arreglo será el más reciente
+      if (idx === 0) {
+        kMov.textContent = it.movimiento;
+        lastMovKey = `${it.fecha_hora}-${it.movimiento}-${it.dispositivo}`;
+      }
     });
   } catch (e) {
     console.error(e);
@@ -146,15 +153,60 @@ function addLiveRow(tipo, detalle) {
   }
 })();
 
-// ====== WebSocket tiempo real ======
+// ====== POLLING: detectar nuevos movimientos por REST ======
+
+async function pollLatestMovimiento() {
+  try {
+    const data = await apiGet("/api/ultimos-mov?limit=1");
+    if (!Array.isArray(data) || data.length === 0) return;
+
+    const it = data[0];
+    const key = `${it.fecha_hora}-${it.movimiento}-${it.dispositivo}`;
+
+    if (key !== lastMovKey) {
+      // Hay un nuevo movimiento en BD
+      lastMovKey = key;
+
+      // Actualiza KPI
+      kMov.textContent = it.movimiento;
+
+      // Añade al stream en tiempo real
+      addLiveRow("movimiento", JSON.stringify(it));
+
+      // Opcional: también podrías actualizar la tabla de historial,
+      // pero como ya tienes varios, lo dejamos así.
+    }
+  } catch (e) {
+    console.error("Error en pollLatestMovimiento:", e.message);
+  }
+}
+
+// cada 4 segundos checamos si hay movimiento nuevo
+setInterval(pollLatestMovimiento, 4000);
+
+// ====== (Opcional) POLLING PARA ÚLTIMO OBSTÁCULO ======
+// Si tu backend tiene un endpoint similar, por ejemplo
+// /api/ultimos-obstaculos?limit=1, puedes descomentar y ajustar:
+/*
+async function pollLatestObstaculo() {
+  try {
+    const data = await apiGet("/api/ultimos-obstaculos?limit=1");
+    if (!Array.isArray(data) || data.length === 0) return;
+    const it = data[0];
+    kObs.textContent = it.obstaculo_texto || `#${it.obstaculo_clave}`;
+    addLiveRow("obstaculo", JSON.stringify(it));
+  } catch (e) {
+    console.error("Error en pollLatestObstaculo:", e.message);
+  }
+}
+setInterval(pollLatestObstaculo, 5000);
+*/
+
+// ====== WebSocket (si tu backend sí envía algo, también lo veremos) ======
 let ws;
 
 function safeParseJSON(text) {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return null;
-  }
+  try { return JSON.parse(text); } catch { return null; }
 }
 
 (function connectWS() {
@@ -174,19 +226,16 @@ function safeParseJSON(text) {
     const raw = ev.data;
     const m = safeParseJSON(raw);
 
-    // Si no se puede parsear, lo mostramos como texto plano
+    // Si no se puede parsear, lo mostramos crudo
     if (!m) {
       addLiveRow("raw", raw);
       return;
     }
 
-    // Si hay un type, úsalo; si no, muestra "msg"
     const tipo = m.type || "msg";
     const detalle = JSON.stringify(m.data ?? m);
-
     addLiveRow(tipo, detalle);
 
-    // Actualizar KPIs si coincide con lo que esperamos
     if (m.type === "command" && m.data && m.data.status_clave != null) {
       kMov.textContent = `#${m.data.status_clave}`;
     }
