@@ -44,8 +44,9 @@ async function apiGet(path) {
   return r.json();
 }
 
-// ====== Chart (Eventos por minuto) ======
-const labels = Array.from({ length: 10 }, (_, i) => `${i - 9}m`);
+// ====== Chart (Eventos cada 10s) ======
+// 10 intervalos de 10 segundos → ~100 segundos de ventana
+const labels = Array.from({ length: 10 }, (_, i) => `${(i - 9) * 10}s`);
 let points = new Array(10).fill(0);
 
 const chartColors = {
@@ -62,7 +63,7 @@ const chart = new Chart(document.getElementById("chart"), {
     labels,
     datasets: [
       {
-        label: "Eventos",
+        label: "Eventos (cada 10s)",
         data: points,
         tension: 0.35,
         borderWidth: 2,
@@ -91,12 +92,12 @@ const chart = new Chart(document.getElementById("chart"), {
   },
 });
 
-// Ventana deslizante de 10 minutos
+// Ventana deslizante de 10 intervalos de 10 segundos
 setInterval(() => {
   points.shift();
   points.push(0);
   chart.update("none");
-}, 60000);
+}, 10000); // 10s
 
 let total = 0;
 const badgeTotal = document.getElementById("badgeTotal");
@@ -108,20 +109,23 @@ function bump() {
 }
 
 // ====== DOM ======
-const tbLive = document.getElementById("tb-live");
+const tbLive = document.getElementById("tb-live"); // ya no existe en la vista, pero lo dejamos por compat
 const tbHist = document.getElementById("tb-hist");
 const kMov   = document.getElementById("k-mov");
 const kObs   = document.getElementById("k-obs");
 
+// Esta función ahora sólo incrementa la gráfica/contador.
+// Si en un futuro reactivas una tabla de stream, se puede reutilizar.
 function addLiveRow(tipo, detalle) {
-  if (!tbLive) return;
-  const tr = document.createElement("tr");
-  tr.className = "fade-in";
-  tr.innerHTML = `
-    <td>${new Date().toLocaleTimeString()}</td>
-    <td>${tipo}</td>
-    <td><pre class="m-0 text-white-50">${detalle}</pre></td>`;
-  tbLive.prepend(tr);
+  if (tbLive) {
+    const tr = document.createElement("tr");
+    tr.className = "fade-in";
+    tr.innerHTML = `
+      <td>${new Date().toLocaleTimeString()}</td>
+      <td>${tipo}</td>
+      <td><pre class="m-0 text-white-50">${detalle}</pre></td>`;
+    tbLive.prepend(tr);
+  }
   bump();
 }
 
@@ -141,7 +145,7 @@ let lastMovKey = null;   // guardaremos algo que identifique el último movimien
         <td>${it.dispositivo}</td>`;
       tbHist.appendChild(tr);
 
-      // El último del arreglo será el más reciente
+      // El elemento 0 del arreglo será el más reciente
       if (idx === 0) {
         kMov.textContent = it.movimiento;
         lastMovKey = `${it.fecha_hora}-${it.movimiento}-${it.dispositivo}`;
@@ -170,11 +174,8 @@ async function pollLatestMovimiento() {
       // Actualiza KPI
       kMov.textContent = it.movimiento;
 
-      // Añade al stream en tiempo real
+      // Contabiliza evento para la gráfica (y, si hubiera, stream)
       addLiveRow("movimiento", JSON.stringify(it));
-
-      // Opcional: también podrías actualizar la tabla de historial,
-      // pero como ya tienes varios, lo dejamos así.
     }
   } catch (e) {
     console.error("Error en pollLatestMovimiento:", e.message);
@@ -184,16 +185,15 @@ async function pollLatestMovimiento() {
 // cada 4 segundos checamos si hay movimiento nuevo
 setInterval(pollLatestMovimiento, 4000);
 
-// ====== (Opcional) POLLING PARA ÚLTIMO OBSTÁCULO ======
-// Si tu backend tiene un endpoint similar, por ejemplo
-// /api/ultimos-obstaculos?limit=1, puedes descomentar y ajustar:
-
+// ====== POLLING PARA ÚLTIMO OBSTÁCULO ======
 async function pollLatestObstaculo() {
   try {
     const data = await apiGet("/api/ultimos-obstaculos?limit=1");
     if (!Array.isArray(data) || data.length === 0) return;
     const it = data[0];
     kObs.textContent = it.obstaculo_texto || `#${it.obstaculo_clave}`;
+
+    // Contamos el evento también en la gráfica
     addLiveRow("obstaculo", JSON.stringify(it));
   } catch (e) {
     console.error("Error en pollLatestObstaculo:", e.message);
@@ -201,7 +201,7 @@ async function pollLatestObstaculo() {
 }
 setInterval(pollLatestObstaculo, 5000);
 
-// ====== WebSocket (si tu backend sí envía algo, también lo veremos) ======
+// ====== WebSocket ======
 let ws;
 
 function safeParseJSON(text) {
@@ -218,24 +218,24 @@ function safeParseJSON(text) {
   }
 
   ws.onopen = () => {
-  wsIndicator(true);
+    wsIndicator(true);
 
-  // handshake obligatorio para registrarse en ws_hub
-  try {
-    ws.send(JSON.stringify({
-      type: "hello",
-      from: "monitor"
-    }));
-  } catch (e) {
-    console.warn("Error enviando handshake WS:", e);
-  }
-};
+    // handshake obligatorio para registrarse en ws_hub
+    try {
+      ws.send(JSON.stringify({
+        type: "hello",
+        from: "monitor"
+      }));
+    } catch (e) {
+      console.warn("Error enviando handshake WS:", e);
+    }
+  };
 
   ws.onmessage = (ev) => {
     const raw = ev.data;
     const m = safeParseJSON(raw);
 
-    // Si no se puede parsear, lo mostramos crudo
+    // Si no se puede parsear, lo contamos como "raw"
     if (!m) {
       addLiveRow("raw", raw);
       return;

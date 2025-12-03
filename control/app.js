@@ -17,11 +17,10 @@ const WS_URL = IS_GITHUB
 const BACKEND_HTTP = API_BASE;
 
 // ====== UTIL ======
-const estado     = document.getElementById('estado');
-const logEl      = document.getElementById('log');
-const kpiLast    = document.getElementById('kpi-last');
-const kpiObs     = document.getElementById('kpi-obs');
-const wsState    = document.getElementById('wsState');
+const estado      = document.getElementById('estado');
+const logEl       = document.getElementById('log');
+const kpiLast     = document.getElementById('kpi-last');
+const wsState     = document.getElementById('wsState');
 const speedSlider = document.getElementById('speed');   // slider de velocidad
 
 const yearSpan = document.getElementById('year');
@@ -37,6 +36,7 @@ function getVelocidad() {
 }
 
 function wsIndicator(ok){
+  if (!wsState) return;
   wsState.innerHTML = ok
     ? `<span class="status-dot status-ok"></span>WS Conectado`
     : `<span class="status-dot status-bad"></span>WS Reconectando…`;
@@ -68,20 +68,25 @@ let ws;
       try{
         const m = JSON.parse(ev.data);
         if (m.type === 'hello') return;
+
         if (m.type === 'command') {
           estado.textContent = 'COMANDO ' + m.data.status_clave + ' enviado';
           kpiLast.textContent = `#${m.data.status_clave}`;
           log(`command → status=${m.data.status_clave}`);
         }
+
         if (m.type === 'device-ack') {
           // Quitamos la palabra "simulado"
           toast('ACK del dispositivo','success');
         }
+
+        // NOTA: los obstáculos siguen existiendo en el backend,
+        // pero aquí ya no mostramos nada en la UI de control.
+        // El monitoreo se encarga de visualizarlos.
         if (m.type === 'obstacle') {
-          estado.textContent = 'OBSTÁCULO ' + m.data.obstaculo_clave;
-          kpiObs.textContent = `#${m.data.obstaculo_clave}`;
-          log(`obstacle → ${m.data.obstaculo_clave}`);
+          log(`obstacle (ignorado en control) → ${m.data.obstaculo_clave}`);
         }
+
         if (m.type === 'demo') {
           toast(`DEMO insertada x${m.data.n}`, 'secondary');
         }
@@ -104,7 +109,7 @@ async function postJSON(url, body){
   return r.json();
 }
 
-// Ahora enviamos también la velocidad
+// Enviar movimiento con velocidad
 async function enviarMovimiento(status_clave, velocidad){
   estado.textContent = 'ENVIANDO...';
   const res = await postJSON(`${API_BASE}/api/movimiento`, {
@@ -116,14 +121,7 @@ async function enviarMovimiento(status_clave, velocidad){
   log(`REST movimiento OK → evento_id=${res.evento_id} vel=${velocidad}`);
 }
 
-async function enviarObstaculo(obstaculo_clave){
-  estado.textContent = 'REPORTANDO OBSTÁCULO...';
-  const res = await postJSON(`${API_BASE}/api/obstaculo`, {
-    obstaculo_clave, dispositivo_id:1, cliente_id:1
-  });
-  log(`REST obstáculo OK → evento_id=${res.evento_id}`);
-}
-
+// DEMO
 async function lanzarDemo(n){
   estado.textContent = `DEMO x${n}...`;
   const r = await fetch(`${API_BASE}/api/demo?n=${n}`, { method:'POST' });
@@ -147,17 +145,10 @@ document.querySelectorAll('[data-op]').forEach(b=>{
   });
 });
 
-document.querySelectorAll('[data-ob]').forEach(b=>{
-  b.addEventListener('click', async ()=>{
-    try { await enviarObstaculo(parseInt(b.dataset.ob,10)); }
-    catch(e){
-      toast('Error reportando obstáculo','danger');
-      log('ERROR obstáculo: '+e.message);
-      estado.textContent='ERROR';
-    }
-  });
-});
+// Ya no hay botones de obstáculos en la UI, así que quitamos el handler data-ob.
+// document.querySelectorAll('[data-ob]') ...  (eliminado)
 
+// Demos
 document.querySelectorAll('[data-demo]').forEach(b=>{
   b.addEventListener('click', async ()=>{
     try { await lanzarDemo(parseInt(b.dataset.demo,10)); }
