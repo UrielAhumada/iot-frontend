@@ -13,15 +13,14 @@ const WS_URL = IS_GITHUB
   ? "wss://macroclimatic-earline-pseudoarchaically.ngrok-free.dev/ws"
   : "ws://localhost:5500/ws";
 
-// (Opcional: si quieres mantener las variables previas, puedes conservarlas)
-const BACKEND_HTTP = API_BASE;
+const BACKEND_HTTP = API_BASE; // alias por si lo necesitas en el futuro
 
 // ====== UTIL ======
 const estado      = document.getElementById('estado');
-const logEl       = document.getElementById('log');
+const logEl       = document.getElementById('log');        // puede no existir en la versión actual
 const kpiLast     = document.getElementById('kpi-last');
 const wsState     = document.getElementById('wsState');
-const speedSlider = document.getElementById('speed');   // slider de velocidad
+const speedSlider = document.getElementById('speed');      // slider de velocidad
 
 const yearSpan = document.getElementById('year');
 if (yearSpan) {
@@ -43,15 +42,18 @@ function wsIndicator(ok){
 }
 
 function toast(msg, type='primary'){
+  const toasts = document.getElementById('toasts');
+  if (!toasts) return;
   const el = document.createElement('div');
   el.className = `toast align-items-center text-bg-${type} border-0 fade-in`;
   el.innerHTML = `<div class="d-flex"><div class="toast-body">${msg}</div>
     <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>`;
-  document.getElementById('toasts').appendChild(el);
+  toasts.appendChild(el);
   new bootstrap.Toast(el, { delay: 2200 }).show();
 }
 
 function log(line){
+  if (!logEl) return;
   const li = document.createElement('li');
   li.className = 'list-group-item fade-in bg-dark text-light';
   li.textContent = `[${new Date().toLocaleTimeString()}] ${line}`;
@@ -63,26 +65,34 @@ let ws;
 (function connectWS(){
   try {
     ws = new WebSocket(WS_URL);
-    ws.onopen = () => { wsIndicator(true); log('WS conectado'); };
+
+    ws.onopen = () => {
+      wsIndicator(true);
+      log('WS conectado');
+      // handshake opcional por si el backend lo usa
+      try {
+        ws.send(JSON.stringify({ type: "hello", from: "control" }));
+      } catch {}
+    };
+
     ws.onmessage = (ev) => {
       try{
         const m = JSON.parse(ev.data);
+
         if (m.type === 'hello') return;
 
         if (m.type === 'command') {
-          estado.textContent = 'COMANDO ' + m.data.status_clave + ' enviado';
-          kpiLast.textContent = `#${m.data.status_clave}`;
+          if (estado) estado.textContent = 'COMANDO ' + m.data.status_clave + ' enviado';
+          if (kpiLast) kpiLast.textContent = `#${m.data.status_clave}`;
           log(`command → status=${m.data.status_clave}`);
         }
 
         if (m.type === 'device-ack') {
-          // Quitamos la palabra "simulado"
+          // Solo mostramos el mensaje de éxito
           toast('ACK del dispositivo','success');
         }
 
-        // NOTA: los obstáculos siguen existiendo en el backend,
-        // pero aquí ya no mostramos nada en la UI de control.
-        // El monitoreo se encarga de visualizarlos.
+        // Obstáculos se ignoran visualmente en el panel de control
         if (m.type === 'obstacle') {
           log(`obstacle (ignorado en control) → ${m.data.obstaculo_clave}`);
         }
@@ -90,10 +100,17 @@ let ws;
         if (m.type === 'demo') {
           toast(`DEMO insertada x${m.data.n}`, 'secondary');
         }
-      }catch{}
+      }catch(e){
+        console.error('Error procesando mensaje WS:', e);
+      }
     };
-    ws.onclose = () => { wsIndicator(false); setTimeout(connectWS, 1200); };
+
+    ws.onclose = () => {
+      wsIndicator(false);
+      setTimeout(connectWS, 1200);
+    };
   } catch (e) {
+    console.error('Error creando WS:', e);
     wsIndicator(false);
   }
 })();
@@ -111,7 +128,7 @@ async function postJSON(url, body){
 
 // Enviar movimiento con velocidad
 async function enviarMovimiento(status_clave, velocidad){
-  estado.textContent = 'ENVIANDO...';
+  if (estado) estado.textContent = 'ENVIANDO...';
   const res = await postJSON(`${API_BASE}/api/movimiento`, {
     status_clave,
     velocidad,          // se manda al backend
@@ -119,12 +136,14 @@ async function enviarMovimiento(status_clave, velocidad){
     cliente_id: 1
   });
   log(`REST movimiento OK → evento_id=${res.evento_id} vel=${velocidad}`);
+  return res;
 }
 
 // DEMO
 async function lanzarDemo(n){
-  estado.textContent = `DEMO x${n}...`;
+  if (estado) estado.textContent = `DEMO x${n}...`;
   const r = await fetch(`${API_BASE}/api/demo?n=${n}`, { method:'POST' });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
   const j = await r.json();
   toast(`DEMO x${j.insertados} iniciada`, 'info');
   log(`REST demo OK → insertados=${j.insertados}`);
@@ -135,27 +154,29 @@ document.querySelectorAll('[data-op]').forEach(b=>{
   b.addEventListener('click', async ()=>{
     try {
       const op  = parseInt(b.dataset.op, 10);
-      const vel = getVelocidad();          // leemos el slider
-      await enviarMovimiento(op, vel);     // y lo mandamos
+      const vel = getVelocidad();
+      await enviarMovimiento(op, vel);
+      // No mostramos toast aquí: la confirmación visual es el ACK del WS
     } catch(e){
-      toast('Error enviando movimiento','danger');
+      console.error('ERROR movimiento:', e);
       log('ERROR movimiento: '+e.message);
-      estado.textContent='ERROR';
+      if (estado) estado.textContent='ERROR al enviar movimiento';
+      // IMPORTANTE: ya NO mostramos el toast rojo
+      // toast('Error enviando movimiento','danger');
     }
   });
 });
 
-// Ya no hay botones de obstáculos en la UI, así que quitamos el handler data-ob.
-// document.querySelectorAll('[data-ob]') ...  (eliminado)
-
 // Demos
 document.querySelectorAll('[data-demo]').forEach(b=>{
   b.addEventListener('click', async ()=>{
-    try { await lanzarDemo(parseInt(b.dataset.demo,10)); }
-    catch(e){
+    try {
+      await lanzarDemo(parseInt(b.dataset.demo,10));
+    } catch(e){
+      console.error('ERROR demo:', e);
       toast('Error en DEMO','danger');
       log('ERROR demo: '+e.message);
-      estado.textContent='ERROR';
+      if (estado) estado.textContent='ERROR en DEMO';
     }
   });
 });
